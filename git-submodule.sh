@@ -449,6 +449,9 @@ cmd_update()
 			;;
 		esac
 
+		# Note that the submodule is a submodule.
+		git -C "$sm_path" config submodule.hasSuperproject "true"
+
 		if test -n "$recursive"
 		then
 			(

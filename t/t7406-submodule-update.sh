@@ -1061,4 +1061,12 @@ test_expect_success 'submodule update --quiet passes quietness to fetch with a s
 	)
 '
 
+test_expect_success 'submodule update adds submodule.hasSuperproject to older repos' '
+	(cd super &&
+	 git -C submodule config --unset submodule.hasSuperproject &&
+	 git submodule update &&
+	 git -C submodule config submodule.hasSuperproject
+	)
+'
+
 test_done

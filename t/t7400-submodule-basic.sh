@@ -115,6 +115,10 @@ inspect() {
 	git -C "$sub_dir" rev-parse HEAD >head-sha1 &&
 	git -C "$sub_dir" update-index --refresh &&
 	git -C "$sub_dir" diff-files --exit-code &&
+
+	# Ensure that submodule.hasSuperproject is set.
+	git -C "$sub_dir" config "submodule.hasSuperproject"
+
 	git -C "$sub_dir" clean -n -d -x >untracked
 }
 

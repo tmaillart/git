@@ -2085,6 +2085,8 @@ static void relocate_single_git_dir_into_superproject(const char *path)
 	char *old_git_dir = NULL, *real_old_git_dir = NULL, *real_new_git_dir = NULL;
 	struct strbuf new_gitdir = STRBUF_INIT;
 	const struct submodule *sub;
+	struct config_set sub_cs;
+	struct strbuf config_path = STRBUF_INIT, sb = STRBUF_INIT;
 
 	if (submodule_uses_worktrees(path))
 		die(_("relocate_gitdir for submodule '%s' with "
@@ -2115,6 +2117,22 @@ static void relocate_single_git_dir_into_superproject(const char *path)
 
 	relocate_gitdir(path, real_old_git_dir, real_new_git_dir);
 
+	/*
+	 * Note location of superproject's gitdir. Because the submodule already
+	 * has a gitdir and local config, we can store this pointer from
+	 * worktree config to worktree config, if the submodule has
+	 * extensions.worktreeConfig set.
+	 */
+	strbuf_addf(&config_path, "%s/config", real_new_git_dir);
+	git_configset_init(&sub_cs);
+	git_configset_add_file(&sub_cs, config_path.buf);
+
+	git_config_set_in_file(config_path.buf, "submodule.hasSuperproject",
+			       "true");
+
+	git_configset_clear(&sub_cs);
+	strbuf_release(&config_path);
+	strbuf_release(&sb);
 	free(old_git_dir);
 	free(real_old_git_dir);
 	free(real_new_git_dir);
