@@ -508,6 +508,7 @@ test_expect_success 'name-rev without commitGraph does not handle non-monotonic 
 		cd non-monotonic &&
 
 		rm -rf .git/info/commit-graph* &&
+		sane_unset GIT_TEST_COMMIT_GRAPH &&
 
 		echo "main~3 undefined" >expect &&
 		git name-rev --tags main~3 >actual &&
