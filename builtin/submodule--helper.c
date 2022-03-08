@@ -1846,6 +1846,11 @@ static int clone_submodule(struct module_clone_data *clone_data)
 		git_config_set_in_file(p, "submodule.alternateErrorStrategy",
 				       error_strategy);
 
+	/*
+	 * Teach the submodule that it's a submodule.
+	 */
+	git_config_set_in_file(p, "submodule.hasSuperproject", "true");
+
 	free(sm_alternate);
 	free(error_strategy);
 
