@@ -75,8 +75,8 @@ verify <file>::
 	cleanly to the current repository.  This includes checks on the
 	bundle format itself as well as checking that the prerequisite
 	commits exist and are fully linked in the current repository.
-	'git bundle' prints a list of missing commits, if any, and exits
-	with a non-zero status.
+	'git bundle' prints the bundle's object filter and its list of
+	missing commits, if any, and exits with a non-zero status.
 
 list-heads <file>::
 	Lists the references defined in the bundle.  If followed by a
