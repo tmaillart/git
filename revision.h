@@ -81,6 +81,7 @@ struct rev_cmdline_info {
 
 struct oidset;
 struct topo_walk_info;
+struct list_objects_filter_options;
 
 struct rev_info {
 	/* Starting list */
@@ -93,6 +94,9 @@ struct rev_info {
 
 	/* The end-points specified by the end user */
 	struct rev_cmdline_info cmdline;
+
+	/* Object filter options. NULL for no filtering. */
+	struct list_objects_filter_options *filter;
 
 	/* excluding from --branches, --refs, etc. expansion */
 	struct string_list *ref_excludes;
