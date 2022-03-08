@@ -475,4 +475,16 @@ test_expect_success 'clone from bundle' '
 	test_cmp expect actual
 '
 
+test_expect_success 'unfiltered bundle with --objects' '
+	git bundle create all-objects.bdl \
+		--all --objects &&
+	git bundle create all.bdl \
+		--all &&
+
+	# Compare the headers of these files.
+	head -11 all.bdl >expect &&
+	head -11 all-objects.bdl >actual &&
+	test_cmp expect actual
+'
+
 test_done
