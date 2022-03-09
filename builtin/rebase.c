@@ -152,6 +152,7 @@ static struct replay_opts get_replay_opts(const struct rebase_options *opts)
 		oidcpy(&replay.squash_onto, opts->squash_onto);
 		replay.have_squash_onto = 1;
 	}
+	replay.subject_len = replay.content_len = 0;
 
 	return replay;
 }
