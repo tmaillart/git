@@ -56,6 +56,9 @@ struct replay_opts {
 	enum commit_msg_cleanup_mode default_msg_cleanup;
 	int explicit_cleanup;
 
+	char *message;
+	int message_len;
+
 	/* Merge strategy */
 	char *default_strategy;  /* from config options */
 	char *strategy;
@@ -109,6 +112,7 @@ struct todo_item {
 	int arg_len;
 	/* The offset of the command and its argument in the strbuf */
 	size_t offset_in_buf, arg_offset;
+	const char *arg;
 };
 
 struct todo_list {

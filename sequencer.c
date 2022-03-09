@@ -1033,9 +1033,10 @@ static int run_git_commit(const char *defmsg,
 		strvec_push(&cmd.args, "--cleanup=strip");
 	if ((flags & VERBATIM_MSG))
 		strvec_push(&cmd.args, "--cleanup=verbatim");
-	if ((flags & EDIT_MSG))
-		strvec_push(&cmd.args, "-e");
-	else if (!(flags & CLEANUP_MSG) &&
+	if ((flags & EDIT_MSG)) {
+		strvec_push(&cmd.args, "-m");
+		strvec_pushf(&cmd.args, "%.*s", opts->message_len, opts->message);
+	} else if (!(flags & CLEANUP_MSG) &&
 		 !opts->signoff && !opts->record_origin &&
 		 !opts->explicit_cleanup)
 		strvec_push(&cmd.args, "--cleanup=verbatim");
@@ -2145,6 +2146,8 @@ static int do_pick_commit(struct repository *r,
 		if (res || command != TODO_REWORD)
 			goto leave;
 		reword = 1;
+		opts->message = item->arg;
+		opts->message_len = item->arg_len;
 		msg_file = NULL;
 		goto fast_forward_edit;
 	}
@@ -2201,9 +2204,11 @@ static int do_pick_commit(struct repository *r,
 			author = get_author(msg.message);
 	}
 
-	if (command == TODO_REWORD)
+	if (command == TODO_REWORD) {
+		opts->message = item->arg;
+		opts->message_len = item->arg_len;
 		reword = 1;
-	else if (is_fixup(command)) {
+	} else if (is_fixup(command)) {
 		if (update_squash_messages(r, command, commit,
 					   opts, item->flags))
 			return -1;
@@ -2427,6 +2432,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 		item->command = TODO_COMMENT;
 		item->commit = NULL;
 		item->arg_offset = bol - buf;
+		item->arg = bol;
 		item->arg_len = eol - bol;
 		return 0;
 	}
@@ -2449,6 +2455,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 				     command_to_string(item->command), bol);
 		item->commit = NULL;
 		item->arg_offset = bol - buf;
+		item->arg = bol;
 		item->arg_len = eol - bol;
 		return 0;
 	}
@@ -2461,6 +2468,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 	    item->command == TODO_RESET) {
 		item->commit = NULL;
 		item->arg_offset = bol - buf;
+		item->arg = bol;
 		item->arg_len = (int)(eol - bol);
 		return 0;
 	}
@@ -2487,6 +2495,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 			item->flags |= TODO_EDIT_MERGE_MSG;
 			item->commit = NULL;
 			item->arg_offset = bol - buf;
+			item->arg = bol;
 			item->arg_len = (int)(eol - bol);
 			return 0;
 		}
@@ -2502,6 +2511,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 
 	bol = end_of_object_name + strspn(end_of_object_name, " \t");
 	item->arg_offset = bol - buf;
+	item->arg = bol;
 	item->arg_len = (int)(eol - bol);
 
 	if (status < 0)
@@ -2562,6 +2572,7 @@ int todo_list_parse_insn_buffer(struct repository *r, char *buf,
 				i, (int)(eol - p), p);
 			item->command = TODO_COMMENT + 1;
 			item->arg_offset = p - buf;
+			item->arg = p;
 			item->arg_len = (int)(eol - p);
 			item->commit = NULL;
 		}
