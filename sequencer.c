@@ -2139,6 +2139,8 @@ static int do_pick_commit(struct repository *r,
 	if (opts->allow_ff && !is_fixup(command) &&
 	    ((parent && oideq(&parent->object.oid, &head)) ||
 	     (!parent && unborn))) {
+		const char *toto, *subj;
+
 		if (is_rebase_i(opts))
 			write_author_script(msg.message);
 		res = fast_forward_to(r, &commit->object.oid, &head, unborn,
@@ -2148,6 +2150,12 @@ static int do_pick_commit(struct repository *r,
 		reword = 1;
 		opts->message = item->arg;
 		opts->message_len = item->arg_len;
+		toto = get_commit_buffer(commit, NULL);
+		find_commit_subject(toto, &subj);
+		if (strcmp(subj, opts->message) != 0)
+			fprintf(stderr,
+				_("NEED INLINE REWORD %s\t%s\n"),
+				subj,opts->message);
 		msg_file = NULL;
 		goto fast_forward_edit;
 	}
