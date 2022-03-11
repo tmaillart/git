@@ -991,6 +991,7 @@ static int run_git_commit(const char *defmsg,
 			  struct replay_opts *opts,
 			  unsigned int flags)
 {
+	char message[opts->content_len + opts->subject_len];
 	struct child_process cmd = CHILD_PROCESS_INIT;
 
 	if ((flags & CLEANUP_MSG) && (flags & VERBATIM_MSG))
@@ -1034,11 +1035,14 @@ static int run_git_commit(const char *defmsg,
 		strvec_push(&cmd.args, "--cleanup=strip");
 	if ((flags & VERBATIM_MSG))
 		strvec_push(&cmd.args, "--cleanup=verbatim");
-	if ((flags & EDIT_MSG)) {
+	if (flags & EDIT_MSG && flags & INLINE_MSG) {
+		memcpy(message, opts->content, opts->content_len);
+		memcpy(message + opts->content_len, opts->subject, opts->subject_len);
 		strvec_push(&cmd.args, "-m");
-		strvec_pushf(&cmd.args, "%.*s", opts->subject_len,
-				opts->subject);
-	} else if (!(flags & CLEANUP_MSG) &&
+		strvec_push(&cmd.args, message);
+	} else if ((flags & EDIT_MSG))
+		strvec_push(&cmd.args, "-e");
+	else if (!(flags & CLEANUP_MSG) &&
 		 !opts->signoff && !opts->record_origin &&
 		 !opts->explicit_cleanup)
 		strvec_push(&cmd.args, "--cleanup=verbatim");
