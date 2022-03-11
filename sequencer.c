@@ -956,6 +956,7 @@ N_("you have staged changes in your working tree\n"
 #define VERIFY_MSG  (1<<4)
 #define CREATE_ROOT_COMMIT (1<<5)
 #define VERBATIM_MSG (1<<6)
+#define INLINE_MSG   (1<<7)
 
 static int run_command_silent_on_success(struct child_process *cmd)
 {
@@ -1035,7 +1036,8 @@ static int run_git_commit(const char *defmsg,
 		strvec_push(&cmd.args, "--cleanup=verbatim");
 	if ((flags & EDIT_MSG)) {
 		strvec_push(&cmd.args, "-m");
-		strvec_pushf(&cmd.args, "%.*s", opts->message_len, opts->message);
+		strvec_pushf(&cmd.args, "%.*s", opts->subject_len,
+				opts->subject);
 	} else if (!(flags & CLEANUP_MSG) &&
 		 !opts->signoff && !opts->record_origin &&
 		 !opts->explicit_cleanup)
@@ -2139,8 +2141,6 @@ static int do_pick_commit(struct repository *r,
 	if (opts->allow_ff && !is_fixup(command) &&
 	    ((parent && oideq(&parent->object.oid, &head)) ||
 	     (!parent && unborn))) {
-		const char *toto, *subj;
-
 		if (is_rebase_i(opts))
 			write_author_script(msg.message);
 		res = fast_forward_to(r, &commit->object.oid, &head, unborn,
@@ -2148,14 +2148,20 @@ static int do_pick_commit(struct repository *r,
 		if (res || command != TODO_REWORD)
 			goto leave;
 		reword = 1;
-		opts->message = item->arg;
-		opts->message_len = item->arg_len;
-		toto = get_commit_buffer(commit, NULL);
-		find_commit_subject(toto, &subj);
-		if (strcmp(subj, opts->message) != 0)
-			fprintf(stderr,
-				_("NEED INLINE REWORD %s\t%s\n"),
-				subj,opts->message);
+		if (strncmp(msg.subject, item->arg_offset, item->arg_len) != 0) {
+			const char *commit_buf, *subject;
+			int subject_len;
+			unsigned long commit_buf_len;
+
+			flags |= INLINE_MSG;
+			opts->subject= item->arg_offset;
+			opts->subject_len = item->arg_len;
+			commit_buf = get_commit_buffer(commit, &commit_buf_len);
+			subject_len = find_commit_subject(commit_buf, &subject);
+			opts->content = subject + subject_len;
+			opts->content_len = (commit_buf + commit_buf_len -
+					subject) + item->arg_len;
+		}
 		msg_file = NULL;
 		goto fast_forward_edit;
 	}
@@ -2213,8 +2219,20 @@ static int do_pick_commit(struct repository *r,
 	}
 
 	if (command == TODO_REWORD) {
-		opts->message = item->arg;
-		opts->message_len = item->arg_len;
+		if (strncmp(msg.subject, item->arg_offset, item->arg_len) != 0) {
+			const char *commit_buf, *subject;
+			int subject_len;
+			unsigned long commit_buf_len;
+
+			flags |= INLINE_MSG;
+			opts->subject= item->arg_offset;
+			opts->subject_len = item->arg_len;
+			commit_buf = get_commit_buffer(commit, &commit_buf_len);
+			subject_len = find_commit_subject(commit_buf, &subject);
+			opts->content = subject + subject_len;
+			opts->content_len = (commit_buf + commit_buf_len -
+					subject) + item->arg_len;
+		}
 		reword = 1;
 	} else if (is_fixup(command)) {
 		if (update_squash_messages(r, command, commit,
@@ -2326,7 +2344,7 @@ static int do_pick_commit(struct repository *r,
 fast_forward_edit:
 			res = run_git_commit(NULL, opts, EDIT_MSG |
 					     VERIFY_MSG | AMEND_MSG |
-					     (flags & ALLOW_EMPTY));
+					     (flags & (ALLOW_EMPTY | INLINE_MSG)));
 			*check_todo = 1;
 		}
 	}
@@ -2409,7 +2427,7 @@ static struct todo_item *append_new_todo(struct todo_list *todo_list)
 const char *todo_item_get_arg(struct todo_list *todo_list,
 			      struct todo_item *item)
 {
-	return todo_list->buf.buf + item->arg_offset;
+	return item->arg_offset;
 }
 
 static int is_command(enum todo_command command, const char **bol)
@@ -2439,8 +2457,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 	if (bol == eol || *bol == '\r' || *bol == comment_line_char) {
 		item->command = TODO_COMMENT;
 		item->commit = NULL;
-		item->arg_offset = bol - buf;
-		item->arg = bol;
+		item->arg_offset = bol;
 		item->arg_len = eol - bol;
 		return 0;
 	}
@@ -2462,8 +2479,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 			return error(_("%s does not accept arguments: '%s'"),
 				     command_to_string(item->command), bol);
 		item->commit = NULL;
-		item->arg_offset = bol - buf;
-		item->arg = bol;
+		item->arg_offset = bol;
 		item->arg_len = eol - bol;
 		return 0;
 	}
@@ -2475,8 +2491,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 	if (item->command == TODO_EXEC || item->command == TODO_LABEL ||
 	    item->command == TODO_RESET) {
 		item->commit = NULL;
-		item->arg_offset = bol - buf;
-		item->arg = bol;
+		item->arg_offset = bol;
 		item->arg_len = (int)(eol - bol);
 		return 0;
 	}
@@ -2502,8 +2517,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 		} else {
 			item->flags |= TODO_EDIT_MERGE_MSG;
 			item->commit = NULL;
-			item->arg_offset = bol - buf;
-			item->arg = bol;
+			item->arg_offset = bol;
 			item->arg_len = (int)(eol - bol);
 			return 0;
 		}
@@ -2518,8 +2532,7 @@ static int parse_insn_line(struct repository *r, struct todo_item *item,
 	*end_of_object_name = saved;
 
 	bol = end_of_object_name + strspn(end_of_object_name, " \t");
-	item->arg_offset = bol - buf;
-	item->arg = bol;
+	item->arg_offset = bol;
 	item->arg_len = (int)(eol - bol);
 
 	if (status < 0)
@@ -2579,8 +2592,7 @@ int todo_list_parse_insn_buffer(struct repository *r, char *buf,
 			res = error(_("invalid line %d: %.*s"),
 				i, (int)(eol - p), p);
 			item->command = TODO_COMMENT + 1;
-			item->arg_offset = p - buf;
-			item->arg = p;
+			item->arg_offset = p;
 			item->arg_len = (int)(eol - p);
 			item->commit = NULL;
 		}
@@ -3035,7 +3047,7 @@ static int walk_revs_populate_todo(struct todo_list *todo_list,
 
 		item->command = command;
 		item->commit = commit;
-		item->arg_offset = 0;
+		item->arg_offset = NULL;
 		item->arg_len = 0;
 		item->offset_in_buf = todo_list->buf.len;
 		subject_len = find_commit_subject(commit_buffer, &subject);
@@ -5450,7 +5462,7 @@ static void todo_list_add_exec_commands(struct todo_list *todo_list,
 
 		base_items[i].command = TODO_EXEC;
 		base_items[i].offset_in_buf = base_offset;
-		base_items[i].arg_offset = base_offset + strlen("exec ");
+		base_items[i].arg_offset = todo_list->buf.buf + base_offset + strlen("exec ");
 		base_items[i].arg_len = command_len - strlen("exec ");
 
 		base_offset += command_len + 1;
