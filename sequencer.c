@@ -1036,11 +1036,12 @@ static int run_git_commit(const char *defmsg,
 	if ((flags & VERBATIM_MSG))
 		strvec_push(&cmd.args, "--cleanup=verbatim");
 	if (flags & EDIT_MSG && flags & INLINE_MSG) {
-		memcpy(message, opts->content, opts->content_len);
-		memcpy(message + opts->content_len, opts->subject, opts->subject_len);
+		memcpy(message, opts->subject, opts->subject_len);
+		memcpy(message + opts->subject_len, opts->content,
+				opts->content_len);
 		strvec_push(&cmd.args, "-m");
 		strvec_push(&cmd.args, message);
-	} else if ((flags & EDIT_MSG))
+	} else if (flags & EDIT_MSG)
 		strvec_push(&cmd.args, "-e");
 	else if (!(flags & CLEANUP_MSG) &&
 		 !opts->signoff && !opts->record_origin &&
@@ -2152,7 +2153,9 @@ static int do_pick_commit(struct repository *r,
 		if (res || command != TODO_REWORD)
 			goto leave;
 		reword = 1;
-		if (strncmp(msg.subject, item->arg_offset, item->arg_len) != 0) {
+		if (strlen(msg.subject) != item->arg_len ||
+		    strncmp(msg.subject, item->arg_offset,
+			    item->arg_len) != 0) {
 			const char *commit_buf, *subject;
 			int subject_len;
 			unsigned long commit_buf_len;
@@ -2223,7 +2226,9 @@ static int do_pick_commit(struct repository *r,
 	}
 
 	if (command == TODO_REWORD) {
-		if (strncmp(msg.subject, item->arg_offset, item->arg_len) != 0) {
+		if (strlen(msg.subject) != item->arg_len ||
+		    strncmp(msg.subject, item->arg_offset,
+			    item->arg_len) != 0) {
 			const char *commit_buf, *subject;
 			int subject_len;
 			unsigned long commit_buf_len;
