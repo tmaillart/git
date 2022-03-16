@@ -56,6 +56,11 @@ struct replay_opts {
 	enum commit_msg_cleanup_mode default_msg_cleanup;
 	int explicit_cleanup;
 
+	const char *content;
+	int content_len;
+	const char *subject;
+	int subject_len;
+
 	/* Merge strategy */
 	char *default_strategy;  /* from config options */
 	char *strategy;
