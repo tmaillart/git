@@ -42,6 +42,7 @@ struct replay_opts {
 	int allow_rerere_auto;
 	int allow_empty;
 	int allow_empty_message;
+	int allow_inline_reword;
 	int drop_redundant_commits;
 	int keep_redundant_commits;
 	int verbose;

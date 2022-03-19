@@ -2331,11 +2331,10 @@ static int do_pick_commit(struct repository *r,
 		*check_todo = !!(flags & EDIT_MSG);
 		if (!res && reword) {
 fast_forward_edit:
-			if (item->arg_len > 0 && (strlen(msg.subject) !=
-			    item->arg_len ||
-			    strncmp(msg.subject, todo_item_get_arg(todo_list,
-				    item),
-				    item->arg_len) != 0)) {
+			if (opts->allow_inline_reword && item->arg_len > 0 &&
+			    (strlen(msg.subject) != item->arg_len ||
+			     strncmp(msg.subject, todo_item_get_arg(todo_list,
+				     item),item->arg_len) != 0)) {
 				const char *commit_buf, *subject;
 				int subject_len;
 				unsigned long commit_buf_len;
