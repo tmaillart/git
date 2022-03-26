@@ -955,6 +955,26 @@ test_expect_success 'rebase -ix with --autosquash' '
 	test_cmp expected actual
 '
 
+test_expect_success 'rebase -i with --allow-inline-reword' '
+	git checkout primary &&
+	git rebase -i --exec "git show HEAD" --autosquash HEAD~4 >/tmp/actual &&
+	(
+		set_fake_editor &&
+		FAKE_LINES="reword 1 2" \
+			git rebase --edit-todo --allow-inline -i HEAD~4 &&
+		cp .git/rebase-merge/git-rebase-todo /tmp/todo
+	)
+'
+	#EDITOR=cat git rebase -i --allow-inline-reword HEAD~4 |
+	#grep '^pick' >orig_todo &&
+	#head -2 orig >top &&
+	#tail -n +3 orig >bottom &&
+	#sed 's,^pick\(.*\)$,reword\1-test,' -i top &&
+	#cat top bottom > .git/rebase-merge/git-rebase-todo &&
+	#git rebase --continue &&
+	#git show -s --format=%s HEAD~3 | grep test &&
+	#git show -s --format=%s HEAD~2 | grep test
+
 test_expect_success 'rebase --exec works without -i ' '
 	git reset --hard execute &&
 	rm -rf exec_output &&

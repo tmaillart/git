@@ -46,7 +46,7 @@ set_fake_editor () {
 	rm -f "$1"
 	echo 'rebase -i script before editing:'
 	cat "$1".tmp
-	action=\&
+	action=\\1
 	for line in $FAKE_LINES; do
 		case $line in
 		pick|p|squash|s|fixup|f|edit|e|reword|r|drop|d|label|l|reset|r|merge|m)
@@ -55,6 +55,8 @@ set_fake_editor () {
 			echo "$line" | sed 's/_/ /g' >> "$1";;
 		merge_*|fixup_*)
 			action=$(echo "$line" | sed 's/_/ /g');;
+		reword_*)
+			action=$(echo "$line" | sed 's,reword_\(.*\),reword \\3 \1,');;
 		"#")
 			echo '# comment' >> "$1";;
 		">")
@@ -62,12 +64,16 @@ set_fake_editor () {
 		bad)
 			action="badcmd";;
 		fakesha)
-			test \& != "$action" || action=pick
+			test \\1 != "$action" || action=pick
 			echo "$action XXXXXXX False commit" >> "$1"
 			action=pick;;
 		*)
-			sed -n "${line}s/^[a-z][a-z]*/$action/p" < "$1".tmp >> "$1"
-			action=\&;;
+			if [ "$action" != '\1' ] &&
+				! echo "$action" | grep reword >/dev/null; then
+				action="$action \3 \4"
+			fi
+			sed -n "${line}s,^\(\([a-z][a-z]*\)\s*\([a-f0-9]*\)\s*\(.*\)\),${action},p" < "$1".tmp >> "$1"
+			action=\\1;;
 		esac
 	done
 	echo 'rebase -i script after editing:'
